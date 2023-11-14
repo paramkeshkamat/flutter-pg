@@ -13,13 +13,21 @@ class WeatherScreen extends StatefulWidget {
 }
 
 class _WeatherScreenState extends State<WeatherScreen> {
-  Future fetchWeatherData() async {
+  late Future<Map<String, dynamic>?> weatherData;
+  bool isFetching = false;
+
+  Future<Map<String, dynamic>?> getWeatherData() async {
     try {
+      setState(() => isFetching = true);
+      print("call");
+
       var response = await http.get(
         Uri.parse(
           "https://api.openweathermap.org/data/2.5/forecast?q=Mumbai&appid=538ccefa66607c6591a1b1958fffda40",
         ),
       );
+
+      setState(() => isFetching = false);
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -34,6 +42,12 @@ class _WeatherScreenState extends State<WeatherScreen> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    weatherData = getWeatherData();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -45,7 +59,11 @@ class _WeatherScreenState extends State<WeatherScreen> {
         centerTitle: true,
         actions: [
           IconButton(
-            onPressed: () {},
+            onPressed: isFetching
+                ? null
+                : () => setState(() {
+                      weatherData = getWeatherData();
+                    }),
             icon: const Icon(Icons.refresh),
           )
         ],
@@ -53,7 +71,7 @@ class _WeatherScreenState extends State<WeatherScreen> {
       body: Padding(
         padding: const EdgeInsets.all(12),
         child: FutureBuilder(
-          future: fetchWeatherData(),
+          future: weatherData,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(
@@ -67,7 +85,7 @@ class _WeatherScreenState extends State<WeatherScreen> {
               return const Text("Something went wrong!");
             }
 
-            final List listData = snapshot.data["list"];
+            final List listData = snapshot.data?["list"];
             final double temperature = listData[0]["main"]["temp"];
             final String description = listData[0]["weather"][0]["main"];
 
